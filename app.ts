@@ -1,30 +1,41 @@
 import express from "express";
-import { _readGoogleSheet, _writeGoogleSheet, _clearGoogleSheet } from "./google-sheet";
+import axios from "axios";
+import { networkInterfaces } from "os";
+
+const nets = networkInterfaces();
+const results = Object.create(null); // Or just '{}', an empty object
+
+for (const name of Object.keys(nets)) {
+    for (const net of nets[name]!) {
+        // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+        // 'IPv4' is in Node <= 17, from 18 it's a number 4 or 6
+        const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4
+        if (net.family === familyV4Value && !net.internal) {
+            if (!results[name]) {
+                results[name] = [];
+            }
+            results[name].push(net.address);
+        }
+    }
+}
+
+console.log(results);
 
 const app = express();
 
 app.use(express.json());
 
-app.get("/take-attendance", async function (req, res) {
-    const { id: studentId } = req.query as { id: string };
+app.get("/google-sheet", async function (req, res) {
+    const query = req.query as { url: string, uid: string };
+
+    console.log(query);
 
     try {
-        const now = new Date();
-        const dateTimeString = `${now.toLocaleDateString()} - ${now.toLocaleTimeString()}`;
-        await _writeGoogleSheet("A2:B", [[dateTimeString, studentId]]);
+        const { data } = await axios.get(query.url + "&uid=" + query.uid);
 
-        res.send("Attendance taken");
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("An error occurred");
-    }
-});
+        console.log(data);
 
-app.get("/clear-attendance", async function (req, res) {
-    try {
-        await _clearGoogleSheet("A2:B");
-
-        res.send("Attendance cleared");
+        res.status(200).send(data);
     } catch (error) {
         console.error(error);
         res.status(500).send("An error occurred");
