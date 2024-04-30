@@ -1,49 +1,46 @@
-import express from "express";
 import axios from "axios";
-import { networkInterfaces } from "os";
+import { WebSocketServer } from 'ws';
+import dotenv from "dotenv";
 
-const nets = networkInterfaces();
-const results = Object.create(null); // Or just '{}', an empty object
+dotenv.config();
+// import { networkInterfaces } from "os";
 
-for (const name of Object.keys(nets)) {
-    for (const net of nets[name]!) {
-        // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-        // 'IPv4' is in Node <= 17, from 18 it's a number 4 or 6
-        const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4
-        if (net.family === familyV4Value && !net.internal) {
-            if (!results[name]) {
-                results[name] = [];
-            }
-            results[name].push(net.address);
-        }
-    }
-}
+// const nets = networkInterfaces();
+// const results = Object.create(null); // Or just '{}', an empty object
 
-console.log(results);
+// for (const name of Object.keys(nets)) {
+//   for (const net of nets[name]!) {
+//     // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+//     // 'IPv4' is in Node <= 17, from 18 it's a number 4 or 6
+//     const familyV4Value = typeof net.family === 'string' ? 'IPv4' : 4
+//     if (net.family === familyV4Value && !net.internal) {
+//       if (!results[name]) {
+//         results[name] = [];
+//       }
+//       results[name].push(net.address);
+//     }
+//   }
+// }
 
-const app = express();
+// console.log(results);
 
-app.use(express.json());
+const port = parseInt(process.env.PORT!) || 8080;
+const wss = new WebSocketServer({ port, path: "/" });
 
-app.get("/google-sheet", async function (req, res) {
-    const query = req.query as { url: string, uid: string };
+wss.on('connection', function connection(ws) {
+  console.log("Connected");
+  ws.on('error', console.error);
 
-    console.log(query);
-
+  ws.on('message', async function message(url) {
     try {
-        const { data } = await axios.get(query.url + "&uid=" + query.uid);
+      const { data } = await axios.get(url.toString());
 
-        console.log(data);
+      console.log(data);
 
-        res.status(200).send(data);
+      ws.send(data);
     } catch (error) {
-        console.error(error);
-        res.status(500).send("An error occurred");
+      console.error(error);
+      ws.send("An error occurred");
     }
-});
-
-const port = process.env.PORT || 3000;
-
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+  });
 });
