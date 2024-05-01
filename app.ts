@@ -41,18 +41,18 @@ server.listen(port, () => {
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', function connection(ws) {
-  console.log("Connected");
+  // console.log("Connected");
   ws.on('error', console.error);
 
   ws.on('message', async function message(url) {
     try {
       const { data } = await axios.get(url.toString());
 
-      console.log(data);
+      // console.log(data);
 
       ws.send(data);
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       ws.send("An error occurred");
     }
   });
