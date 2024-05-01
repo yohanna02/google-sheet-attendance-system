@@ -1,4 +1,6 @@
 import axios from "axios";
+import { createServer } from "http";
+import express from "express";
 import { WebSocketServer } from 'ws';
 import dotenv from "dotenv";
 
@@ -25,7 +27,18 @@ dotenv.config();
 // console.log(results);
 
 const port = parseInt(process.env.PORT!) || 8080;
-const wss = new WebSocketServer({ port, path: "/" });
+const app = express();
+const server = createServer(app);
+
+app.get("/", function(req, res) {
+  res.send("<h1>Server is Running</h1>");
+});
+
+server.listen(port, () => {
+  console.log(`Server started on port ${port}`);
+});
+
+const wss = new WebSocketServer({ server });
 
 wss.on('connection', function connection(ws) {
   console.log("Connected");
